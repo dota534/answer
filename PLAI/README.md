@@ -1,3 +1,3 @@
-# answer
+# PLAI
 
-刷题用
+中文地址：https://www.gitbook.com/book/lotuc/plai-cn/details

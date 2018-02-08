@@ -1,0 +1,47 @@
+#lang plai-typed
+(define-type FunDefC
+      [fdC (name : symbol) (arg : symbol) (body : ExprC)])
+
+(define-type ExprC
+      [numC (n : number)]
+      [idC (s : symbol)]  ;标识符的定义
+      [appC (fun : symbol) (arg : ExprC)]  ;调用的定义
+      [plusC (l : ExprC) (r : ExprC)]
+      [multC (l : ExprC) (r : ExprC)])
+
+(define (interp [e : ExprC] [fds : (listof FunDefC)]) : number
+  (type-case ExprC e
+    [numC (n) n]
+    [idC (_) (error 'interp "shouldn't get here")]  ;解释之标识符子句
+    [appC (f a) (local ([define fd (get-fundef f fds)])
+                  (interp (subst a
+                                 (fdC-arg fd)
+                                 (fdC-body fd))
+                          fds))]  ;解释之调用子句
+    [plusC (l r) (+ (interp l fds) (interp r fds))]
+    [multC (l r) (* (interp l fds) (interp r fds))]))
+
+(define (subst [what : ExprC] [for : symbol] [in : ExprC]) : ExprC
+  (type-case ExprC in
+    [numC (n) in]
+    [idC (s) (cond
+               [(symbol=? s for) what]
+               [else in])]
+    [appC (f a) (appC f (subst what for a))]
+    [plusC (l r) (plusC (subst what for l)
+                        (subst what for r))]
+    [multC (l r) (multC (subst what for l)
+                        (subst what for r))]))
+
+;获取函数定义
+(define (get-fundef [n : symbol] [fds : (listof FunDefC)]) : FunDefC
+  (cond
+    [(empty? fds) (error 'get-fundef "reference to undefined function")]  ;引用未定义的函数
+    [(cons? fds) (cond
+                   [(equal? n (fdC-name (first fds))) (first fds)]
+                   [else (get-fundef n (rest fds))])]))
+
+
+(fdC 'double 'x (plusC (idC 'x) (idC 'x)))
+(fdC 'quadruple 'x (appC 'double (appC 'double (idC 'x))))
+(fdC 'const5 'x (numC 5))
